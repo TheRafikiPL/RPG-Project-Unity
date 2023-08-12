@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <ui:VisualElement name="Background" style="flex-grow: 1; background-color: rgba(0, 0, 0, 0); position: absolute; flex-direction: row;">
+        <ui:Label tabindex="-1" text="Label" display-tooltip-when-elided="true" name="CharacterName" />
+        <ui:ProgressBar value="0" title="0/100" low-value="0" name="HPBar" />
+        <ui:ProgressBar value="0" title="0/100" name="ManaBar" />
+    </ui:VisualElement>
+</ui:UXML>
