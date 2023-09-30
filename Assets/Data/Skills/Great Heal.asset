@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   skillName: Great Heal
   description: Heal 100% HP for one ally
-  affinityTexture: {fileID: 2800000, guid: 2ad14a0eb2edd9941a65e1e4f167aeb4, type: 3}
+  affinityTexture: {fileID: 21300000, guid: 2ad14a0eb2edd9941a65e1e4f167aeb4, type: 3}
   MPCost: 30
   HPPercentCost: 0
-  Scope: 3
+  scope: 3
   type: 4
   hitRatePercent: 0
   affinity: 0

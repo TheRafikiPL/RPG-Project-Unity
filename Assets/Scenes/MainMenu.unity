@@ -1157,6 +1157,10 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 64ada52e304050143a931faac7dfbf8a, type: 3}
   sounds:
   - {fileID: 8300000, guid: 9c7a058deaea8c245940e32e7c133fe3, type: 3}
+  isCorrectOgg: 0
+  loopStart: 0
+  loopLength: 0
+  loopEnd: 0
 --- !u!4 &671393404
 Transform:
   m_ObjectHideFlags: 0

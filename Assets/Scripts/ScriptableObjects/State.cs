@@ -17,4 +17,28 @@ public class State : ScriptableObject
     Restriction restriction;
     [SerializeField]
     AutoRemainingTime timing;
+    public string StatusName
+    {
+        get { return statusName; }
+    }
+    public Sprite Sprite
+    {
+        get { return sprite; }
+    }
+    public int MinDuration
+    {
+        get { return minDuration; }
+    }
+    public int MaxDuration
+    {
+        get { return maxDuration; }
+    }
+    public Restriction Restriction
+    {
+        get { return restriction; }
+    }
+    public AutoRemainingTime Timing
+    { 
+        get { return timing; } 
+    }
 }

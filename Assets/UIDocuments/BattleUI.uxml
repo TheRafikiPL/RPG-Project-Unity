@@ -1,9 +1,0 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <Style src="project://database/Assets/UIDocuments/Stylesheets/BattleUI.uss?fileID=7433441132597879392&amp;guid=096457789a8bfe740ad615c02c61408d&amp;type=3#BattleUI" />
-    <ui:VisualElement name="TurnCount" style="flex-grow: 1; background-color: rgba(0, 0, 0, 0); position: absolute; right: 0; width: 100%; height: 13%; flex-direction: row-reverse; opacity: 0.5;" />
-    <ui:VisualElement name="BattlePanel" style="flex-grow: 1; background-color: rgba(38, 60, 166, 0); height: 35%; bottom: 0; top: auto; width: 100%; position: absolute; opacity: 1; flex-direction: row;">
-        <ui:VisualElement name="Background" style="flex-grow: 1; background-color: rgb(38, 60, 166); position: absolute; left: auto; width: 100%; height: 100%; opacity: 0.46;" />
-        <ui:ListView focusable="false" name="SkillList" show-add-remove-footer="false" show-border="false" show-bound-collection-size="true" horizontal-scrolling="false" show-foldout-header="false" style="width: 48%;" />
-        <ui:ListView focusable="true" name="HealthPanel" horizontal-scrolling="false" style="height: auto; width: 52%;" />
-    </ui:VisualElement>
-</ui:UXML>

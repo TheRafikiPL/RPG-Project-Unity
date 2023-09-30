@@ -10,13 +10,13 @@ public class Skill : ScriptableObject
     [SerializeField]
     string description;
     [SerializeField]
-    Texture2D affinityTexture;
+    Sprite affinityTexture;
     [SerializeField]
     int MPCost;
     [SerializeField]
     int HPPercentCost;
     [SerializeField]
-    TargetChoice Scope;
+    TargetChoice scope;
     [SerializeField]
     SkillType type;
     [SerializeField]
@@ -31,10 +31,6 @@ public class Skill : ScriptableObject
     bool canCrit;
     [SerializeField]
     List<State> states;
-    public void ActivateSkill()
-    {
-
-    }
     public string SkillName 
     { 
         get 
@@ -58,11 +54,90 @@ public class Skill : ScriptableObject
             return temp; 
         } 
     }
-    public Texture2D AffinityTexture
+    public Sprite AffinityTexture
     {
         get
         {
             return affinityTexture;
         }
+    }
+    public TargetChoice Scope
+    {
+        get
+        {
+            return scope;
+        }
+    }
+    public SkillType SkillType 
+    { 
+        get 
+        { 
+            return type; 
+        } 
+    }
+    public int HitRate
+    {
+        get 
+        { 
+            return hitRatePercent; 
+        }
+    }
+    public Element Affinity
+    {
+        get
+        {
+            return affinity;
+        }
+    }
+    public int CalculateDamage(Character attacker, Character defender)
+    {
+        int damage = 5;
+        if(affinity == Element.PHYSICAL)
+        {
+            damage = (int)(damage * Mathf.Sqrt((float)attacker.Strength / defender.Dexterity * power));
+        }
+        else
+        {
+            damage = (int)(damage * Mathf.Sqrt((float)attacker.Magic / defender.Dexterity * power));
+        }
+        return damage;
+    }
+    public bool CanCrit
+    {
+        get
+        {
+            return canCrit;
+        }
+    }
+    public List<State> States
+    {
+        get
+        {
+            return states;
+        }
+    }
+    public int SkillCostNumberMP
+    {
+        get { return MPCost; }
+    }
+    public int SkillCostPercentHP
+    {
+        get { return HPPercentCost; }
+    }
+    public bool CharacterHaveHP(Character c)
+    {
+        if(c.CurrentHP < c.MaxHP * HPPercentCost / 100)
+        {
+            return false;
+        }
+        return true;
+    }
+    public bool CharacterHaveMP(Character c)
+    {
+        if (c.CurrentMP < MPCost)
+        {
+            return false;
+        }
+        return true;
     }
 }
