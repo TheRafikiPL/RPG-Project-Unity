@@ -6,8 +6,8 @@ Unity version: 2022.2.11f1
 The project includes copyrighted assets to which I don't have ownership:
 - Grassland.png image from RPG Maker MV
 - Click.ogg sound from RPG Maker MV
-- Sound Test.ogg from Shin Megami Tesei III
-- FOE.ogg from Persona Q: Shadow of Labyrinth 
+- Sound Test.ogg song from Shin Megami Tesei III
+- FOE.ogg song from Persona Q: Shadow of Labyrinth 
 
 # How to install? (Windows only)
 1. Download the repository
