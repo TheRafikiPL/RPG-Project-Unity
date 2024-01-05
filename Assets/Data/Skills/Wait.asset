@@ -10,19 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: be7b4b72bfe0cf041852a476161020b9, type: 3}
-  m_Name: Guard
+  m_Name: Wait
   m_EditorClassIdentifier: 
-  skillName: Guard
-  description: Half damage from next attack
+  skillName: Wait
+  description: Wait turn
   affinityTexture: {fileID: 21300000, guid: 2ad14a0eb2edd9941a65e1e4f167aeb4, type: 3}
   MPCost: 0
   HPPercentCost: 0
-  scope: 7
+  scope: 0
   type: 0
   hitRatePercent: 100
   affinity: 0
   power: 0
   variancePercent: 0
   canCrit: 0
-  states:
-  - {fileID: 11400000, guid: 048f6724093b6634da815362a201ec1e, type: 2}
+  states: []

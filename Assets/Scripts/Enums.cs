@@ -61,3 +61,11 @@ public enum AutoRemainingTime
     ACTION_END,
     TURN_END
 }
+
+public enum GameState
+{
+    START_SIDE,
+    START_TURN,
+    END_SIDE,
+    END_TURN
+}

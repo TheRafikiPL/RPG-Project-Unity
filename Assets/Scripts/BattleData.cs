@@ -24,4 +24,16 @@ public class BattleData : MonoBehaviour
             Destroy(gameObject);
         }
     }
+    public List<int> PrepareDataForAI()
+    {
+        List<int> data = new List<int>();
+        for (int i = 0; i < skillList.Count; i++)
+        {
+            if (enemies[0].Skills.Contains(skillList[i]) && skillList[i].CharacterHaveMP(enemies[0]))
+            {
+                data.Add(i);
+            }
+        }
+        return data;
+    }
 }

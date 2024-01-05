@@ -1,45 +1,144 @@
 using System.Collections;
 using System.Collections.Generic;
 using Unity.MLAgents;
-using UnityEditor.Experimental.GraphView;
-using UnityEditor.UI;
+using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.SceneManagement;
-using UnityEngine.TextCore.Text;
+using UnityEngine.UI;
 
-public class BattleManager : MonoBehaviour
+public class TrainingManager : MonoBehaviour
 {
-    public static BattleManager instance;
-    [SerializeField]
-    BattleUIController UIController;
-    public Skill selectedSkill;
-    public bool isPlayerTurn = true;
-    public bool battleOn;
+    public EnemyTrainer trainer;
 
+    public List<Character> party = new List<Character>();
+    public List<Character> enemies = new List<Character>();
     public Character currentCharacter;
+    public Skill selectedSkill;
+
+    public List<State> statesList;
+    public List<Skill> skills;
 
     public List<int> moveQueue = new List<int>();
-    public int currentIndex;
+    public int currentIndex = 0;
     public List<bool> turnQueue = new List<bool>();
+    public bool isPlayerTurn = true;
 
-    public EnemyBehaviour enemyAI;
+    public int pointsMin = 1;
+    public int pointsMax = 9999;
+    public int statMin = 1;
+    public int statMax = 99;
+    public int minActors = 1;
+    public int maxActors = 4;
 
-    private void Start()
+    public float startSideTime = 5f;
+    public float startTurnTime = 5f;
+    public bool isBusy = true;
+    public GameState gameState;
+    public int maxTurns = 400;
+    public int turns = 0;
+
+    public void PrepareData()
     {
-        if (instance == null)
+        turns = 0;
+        moveQueue = new List<int>();
+        currentIndex = 0;
+        turnQueue = new List<bool>();
+        isPlayerTurn = true;
+        int HP, MP, strength, magic, dexterity, agility, luck;
+        
+        party.Clear();
+        //Randomize party
+        int partyCount = Random.Range(minActors,maxActors+1);
+        //Debug.Log($"Party Count - {partyCount}");
+
+        for (int i = 0; i < partyCount; i++)
         {
-            instance = this;
+            HP = Random.Range(pointsMin, pointsMax + 1);
+            MP = Random.Range(pointsMin, pointsMax + 1);
+            strength = Random.Range(statMin, statMax + 1);
+            magic = Random.Range(statMin, statMax + 1);
+            dexterity = Random.Range(statMin, statMax + 1);
+            agility = Random.Range(statMin, statMax + 1);
+            luck = Random.Range(statMin, statMax + 1);
+            //Debug.Log($"Party Member {i}: {HP}, {MP}, {strength}, {magic}, {dexterity}, {agility}, {luck}");
+            Character character = new Character(i.ToString(), HP, HP, MP, MP, strength, magic, dexterity, agility, luck, null, RandomizeSkills(), RandomizeAffinities());
+            party.Add(character);
         }
-        AudioSystem.instance.PlayBattleTheme();
-        BattleSetup();
-        StartSide();
+        enemies.Clear();
+        //Randomize enemy
+        HP = Random.Range(pointsMin, pointsMax + 1);
+        MP = Random.Range(pointsMin, pointsMax + 1);
+        strength = Random.Range(statMin, statMax + 1);
+        magic = Random.Range(statMin, statMax + 1);
+        dexterity = Random.Range(statMin, statMax + 1);
+        agility = Random.Range(statMin, statMax + 1);
+        luck = Random.Range(statMin, statMax + 1);
+        //Debug.Log($"Enemy: {HP}, {MP}, {strength}, {magic}, {dexterity}, {agility}, {luck}");
+        Character c = new Character("Enemy", HP, HP, MP, MP, strength, magic, dexterity, agility, luck, null, RandomizeSkills(), RandomizeAffinities());
+        enemies.Add(c);
     }
-    void BattleSetup()
+
+    void Start()
     {
-        battleOn = true;
-        UIController.CreateActors();
-        UIController.CreateHPBars();
+        ResetEnvironment();
     }
+    private void Update()
+    {
+        if(isBusy)
+        {
+            return;
+        }
+        isBusy = true;
+        switch (gameState)
+        {
+            case GameState.START_SIDE:
+                StartSide();
+                break;
+            case GameState.START_TURN:
+                StartTurn();
+                break;
+            case GameState.END_SIDE:
+                EndSide();
+                break;
+            case GameState.END_TURN:
+                EndTurn();
+                break;
+        }
+    }
+    List<Skill> RandomizeSkills()
+    {
+        string log = "";
+        List<Skill> list = new List<Skill>();
+        list.Add(skills[0]);
+        log += skills[0].SkillName + ", ";
+        list.Add(skills[1]);
+        log += skills[1].SkillName + ", ";
+        for (int i = 2; i < skills.Count; i++)
+        {
+            if(Random.Range(0,2)>0)
+            {
+                list.Add(skills[i]);
+                log += skills[i].SkillName+", ";
+            }
+        }
+        Debug.Log(log);
+        return list;
+    }
+
+    Dictionary<Element, ElementRelation> RandomizeAffinities()
+    {
+        //string log = "";
+        Dictionary<Element, ElementRelation> dict = new Dictionary<Element, ElementRelation>();
+        dict.Add(Element.NONE, ElementRelation.NORMAL);
+        for (int i = 1; i < 8; i++)
+        {
+            dict.Add((Element)i,(ElementRelation)Random.Range(0,6));
+            //log += $"{((Element)i).ToString()} - {((ElementRelation)dict[(Element)i]).ToString()}\n";
+        }
+        dict.Add(Element.ALMIGHTY, ElementRelation.NORMAL);
+        //Debug.Log(log);
+        return dict;
+    }
+
     void StartSide()
     {
         CreateTurns();
@@ -47,102 +146,115 @@ public class BattleManager : MonoBehaviour
         currentIndex = moveQueue[0];
         moveQueue.RemoveAt(0);
         moveQueue.Add(currentIndex);
-        StartTurn();
+        //StartTurn();
+
+        gameState = GameState.START_TURN;
+        isBusy = false;
     }
     void StartTurn()
     {
+        turns++;
         SetCurrentCharacter();
-        UIController.FillTurnQueue();
-        UIController.HighlightActor();
-        if(isPlayerTurn)
+        if (isPlayerTurn)
         {
-            UIController.ShowSkills();
+            //RandomSkill
+            UseRandomSkill();
         }
         else
         {
-            UIController.HideSkills();
-            AIActions();
+            //AILearn
+            AIMove();
         }
+        //Academy.Instance.EnvironmentStep();
+
+        gameState = GameState.END_TURN;
+        isBusy = false;
+        //EndTurn();
     }
     bool CheckWin()
     {
-        foreach(Character c in BattleData.instance.enemies)
-        {
-            if(c.CurrentHP>0)
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-    bool CheckLose()
-    {
-        foreach (Character c in BattleData.instance.party)
+        foreach (Character c in enemies)
         {
             if (c.CurrentHP > 0)
             {
                 return false;
             }
         }
+        //Debug.Log("Victory");
+        return true;
+    }
+    bool CheckLose()
+    {
+        foreach (Character c in party)
+        {
+            if (c.CurrentHP > 0)
+            {
+                return false;
+            }
+        }
+        //Debug.Log("Lose");
         return true;
     }
     void EndTurn()
     {
-        UIController.DehighlightActor();
-        if(CheckLose())
+        if (CheckLose() || CheckWin() || turns > maxTurns)
         {
-            battleOn = false;
-            enemyAI.EndEpisode();
-            UIController.EndBattle(false);
+            trainer.NotifyEndEpisode();
             return;
         }
-        if(CheckWin())
+        if (turnQueue.Count < 1)
         {
-            battleOn = false;
-            enemyAI.EndEpisode();
-            UIController.EndBattle(true);
-            return;
-        }
-        HideTargets();
-        if(turnQueue.Count < 1)
-        {
-            EndSide();
+            gameState = GameState.END_SIDE;
+            isBusy = false;
+            //EndSide();
             return;
         }
         currentIndex = moveQueue[0];
         moveQueue.RemoveAt(0);
         moveQueue.Add(currentIndex);
-        StartTurn();
+        if(isPlayerTurn)
+        {
+            CheckMoveQueue();
+        }
+        gameState = GameState.START_TURN;
+        isBusy = false;
+        //Invoke("StartTurn", startTurnTime);
+        //startButton.gameObject.SetActive(true);
     }
     void EndSide()
     {
         isPlayerTurn = !isPlayerTurn;
-        StartSide();
+        gameState = GameState.START_SIDE;
+        isBusy = false;
+        //StartSide();
     }
-
     void SetCurrentCharacter()
     {
+
         if (isPlayerTurn)
         {
-            currentCharacter = BattleData.instance.party[currentIndex];
+            currentCharacter = party[moveQueue[0]];
             return;
         }
-        currentCharacter = BattleData.instance.enemies[currentIndex];
+        currentCharacter = enemies[moveQueue[0]];
     }
     void CreateMoveQueue()
     {
         moveQueue.Clear();
         if (isPlayerTurn)
         {
-            for (int i = 0; i < BattleData.instance.party.Count; i++)
+            for (int i = 0; i < party.Count; i++)
             {
-                moveQueue.Add(i);
+                if (!party[i].CheckStatesByName("Death"))
+                {
+                    moveQueue.Add(i);
+                }  
             }
             for (int i = 0; i < moveQueue.Count - 1; i++)
             {
                 for (int j = i + 1; j < moveQueue.Count; j++)
                 {
-                    if (BattleData.instance.party[moveQueue[i]].Agility < BattleData.instance.party[moveQueue[j]].Agility)
+                    if (party[moveQueue[i]].Agility < party[moveQueue[j]].Agility)
                     {
                         int temp = moveQueue[i];
                         moveQueue[i] = moveQueue[j];
@@ -152,7 +264,7 @@ public class BattleManager : MonoBehaviour
             }
             return;
         }
-        for (int i = 0; i < BattleData.instance.enemies.Count; i++)
+        for (int i = 0; i < enemies.Count; i++)
         {
             moveQueue.Add(i);
         }
@@ -160,7 +272,7 @@ public class BattleManager : MonoBehaviour
         {
             for (int j = i + 1; j < moveQueue.Count; j++)
             {
-                if (BattleData.instance.enemies[moveQueue[i]].Agility > BattleData.instance.enemies[moveQueue[j]].Agility)
+                if (enemies[moveQueue[i]].Agility > enemies[moveQueue[j]].Agility)
                 {
                     int temp = moveQueue[i];
                     moveQueue[i] = moveQueue[j];
@@ -174,18 +286,18 @@ public class BattleManager : MonoBehaviour
         turnQueue.Clear();
         if (isPlayerTurn)
         {
-            for (int i = 0; i < BattleData.instance.party.Count; i++)
+            for (int i = 0; i < party.Count; i++)
             {
-                if (!BattleData.instance.party[i].States.Contains(BattleData.instance.statesList[0]))
+                if (!party[i].States.Contains(statesList[0]))
                 {
                     turnQueue.Add(true);
                 }
             }
             return;
         }
-        for (int i = 0; i < BattleData.instance.enemies.Count; i++)
+        for (int i = 0; i < enemies.Count; i++)
         {
-            if (!BattleData.instance.enemies[i].States.Contains(BattleData.instance.statesList[0]))
+            if (!enemies[i].States.Contains(statesList[0]))
             {
                 turnQueue.Add(true);
             }
@@ -240,38 +352,25 @@ public class BattleManager : MonoBehaviour
         }
         turnQueue.Clear();
     }
-    //Button functions
-    public void LeaveBattle()
-    {
-        AudioSystem.instance.PlaySound("Click");
-        SceneManager.LoadScene("CharacterCreator");
-        AudioSystem.instance.PlayMenuBackMusic();
-    }
-    public void ShowTargets()
-    {
-        UIController.ShowTargetsUI();
-    }
-    public void HideTargets()
-    {
-        UIController.HideTargetsTargetsUI();
-    }
     public void UseSkill(List<Character> targets)
     {
-        UIController.battleLog.AddLog($"{currentCharacter.Nickname} uses {selectedSkill.SkillName}.", Color.white);
-        if(isPlayerTurn)
+        //Debug.Log($"{currentCharacter.Nickname} - {selectedSkill.SkillName}");
+        if (isPlayerTurn)
         {
-            currentCharacter.ChangeHP(-selectedSkill.SkillCostPercentHP, true);
+            currentCharacter.ChangeHP(-selectedSkill.SkillCostPercentHP, true, statesList[0]);
         }
         currentCharacter.ChangeMP(-selectedSkill.SkillCostNumberMP);
-        foreach(Character target in targets)
+        foreach (Character target in targets)
         {
             ChangeTurns(SkillActivation(currentCharacter, target));
         }
-        UIController.UpdateHPInfo();
-        EndTurn();
     }
     public ElementRelation SkillActivation(Character attacker, Character defender)
     {
+        if(selectedSkill.SkillName == "Wait")
+        {
+            return ElementRelation.NORMAL;
+        }    
         //CALCULATE DAMAGE/HEALING
         int damage = selectedSkill.CalculateDamage(attacker, defender);
 
@@ -327,43 +426,34 @@ public class BattleManager : MonoBehaviour
             {
                 case ElementRelation.WEAK:
                     damage = Mathf.CeilToInt(damage * 1.2f);
-                    defender.ChangeHP(-damage);
-                    UIController.battleLog.AddLog($"{attacker.Nickname} attacks {defender.Nickname} weak point. Deals {damage} damage.", Color.red);
+                    defender.ChangeHP(-damage, false, statesList[0]);
                     break;
                 case ElementRelation.STRONG:
                     damage = Mathf.CeilToInt(damage * 0.8f);
-                    defender.ChangeHP(-damage);
-                    UIController.battleLog.AddLog($"{attacker.Nickname} attacks {defender.Nickname}'s strong point. Deals {damage} damage.", Color.blue);
+                    defender.ChangeHP(-damage, false, statesList[0]);
                     break;
                 case ElementRelation.NORMAL:
-                    UIController.battleLog.AddLog($"{attacker.Nickname} attacks {defender.Nickname}. Deals {damage} damage.", Color.white);
-                    defender.ChangeHP(-damage);
+                    defender.ChangeHP(-damage, false, statesList[0]);
                     break;
                 case ElementRelation.ABSORB:
-                    defender.ChangeHP(damage);
-                    UIController.battleLog.AddLog($"{attacker.Nickname} attacks {defender.Nickname}'s absorb point. Drains {damage} damage.", Color.green);
+                    defender.ChangeHP(damage, false, statesList[0]);
                     break;
                 case ElementRelation.REPEL:
-                    switch(attacker.Affinities[selectedSkill.Affinity])
+                    switch (attacker.Affinities[selectedSkill.Affinity])
                     {
                         case ElementRelation.NULL:
-                            UIController.battleLog.AddLog($"{attacker.Nickname} attacks {defender.Nickname}'s repel point. {attacker.Nickname} nullifies repeled damage.", Color.magenta);
                             break;
-                        case ElementRelation.ABSORB: 
-                            attacker.ChangeHP(damage);
-                            UIController.battleLog.AddLog($"{attacker.Nickname} attacks {defender.Nickname}'s repel point. {attacker.Nickname} absorbs {damage} repeled damage.", Color.green);
+                        case ElementRelation.ABSORB:
+                            attacker.ChangeHP(damage, false, statesList[0]);
                             break;
                         case ElementRelation.REPEL:
-                            UIController.battleLog.AddLog($"{attacker.Nickname} attacks {defender.Nickname}'s repel point. {attacker.Nickname} have repel on this element so damage is nullified.", Color.magenta);
                             break;
                         default:
-                            attacker.ChangeHP(-damage);
-                            UIController.battleLog.AddLog($"{attacker.Nickname} attacks {defender.Nickname}'s repel point. {attacker.Nickname} gets {damage} damage.", Color.cyan);
+                            attacker.ChangeHP(-damage, false, statesList[0]);
                             break;
                     }
                     break;
                 case ElementRelation.NULL:
-                    UIController.battleLog.AddLog($"{attacker.Nickname} attacks {defender.Nickname}'s null point.", Color.magenta);
                     break;
             }
         }
@@ -402,28 +492,28 @@ public class BattleManager : MonoBehaviour
                     break;
             }
         }
-        
+
     }
     void SkillRecover(int heal, Character target, bool isPercent = false, bool isHP = true)
     {
-        if(!isPlayerTurn)
+        if (!isPlayerTurn)
         {
-            enemyAI.AddReward(enemyAI.healReward);
+            trainer.positiveRewards += trainer.healReward;
         }
-        if(isHP)
+        if (isHP)
         {
             if (isPercent)
             {
-                target.ChangeHP(heal, true);
+                target.ChangeHP(heal, true, statesList[0]);
             }
             else
             {
-                target.ChangeHP(heal);
+                target.ChangeHP(heal, false, statesList[0]);
             }
         }
         else
         {
-            if(isPercent)
+            if (isPercent)
             {
                 target.ChangeMP(heal, true);
             }
@@ -445,20 +535,20 @@ public class BattleManager : MonoBehaviour
             {
                 case ElementRelation.WEAK:
                     damage = Mathf.CeilToInt(damage * 1.2f);
-                    defender.ChangeHP(-damage);
-                    attacker.ChangeHP(damage);
+                    defender.ChangeHP(-damage, false, statesList[0]);
+                    attacker.ChangeHP(damage, false, statesList[0]);
                     break;
                 case ElementRelation.STRONG:
                     damage = Mathf.CeilToInt(damage * 0.8f);
-                    defender.ChangeHP(-damage);
-                    attacker.ChangeHP(damage);
+                    defender.ChangeHP(-damage, false, statesList[0]);
+                    attacker.ChangeHP(damage, false, statesList[0]);
                     break;
                 case ElementRelation.NORMAL:
-                    defender.ChangeHP(-damage);
-                    attacker.ChangeHP(damage);
+                    defender.ChangeHP(-damage, false, statesList[0]);
+                    attacker.ChangeHP(damage, false, statesList[0]);
                     break;
                 case ElementRelation.ABSORB:
-                    defender.ChangeHP(damage);
+                    defender.ChangeHP(damage, false, statesList[0]);
                     break;
                 case ElementRelation.REPEL:
                     switch (attacker.Affinities[selectedSkill.Affinity])
@@ -466,13 +556,13 @@ public class BattleManager : MonoBehaviour
                         case ElementRelation.NULL:
                             break;
                         case ElementRelation.ABSORB:
-                            attacker.ChangeHP(damage);
+                            attacker.ChangeHP(damage, false, statesList[0]);
                             break;
                         case ElementRelation.REPEL:
                             break;
                         default:
-                            attacker.ChangeHP(-damage);
-                            defender.ChangeHP(damage);
+                            attacker.ChangeHP(-damage, false, statesList[0]);
+                            defender.ChangeHP(damage, false, statesList[0]);
                             break;
                     }
                     break;
@@ -518,80 +608,133 @@ public class BattleManager : MonoBehaviour
             }
         }
     }
-
-    //AI Specific
-    public void AIActions()
+    void ChooseRewardByRelation(ElementRelation relation)
     {
-        if (!battleOn)
+        switch (relation)
         {
-            return;
+            case ElementRelation.WEAK:
+                trainer.positiveRewards += trainer.weakReward;
+                break;
+            case ElementRelation.STRONG:
+                trainer.negativeRewards += trainer.strongReward;
+                break;
+            case ElementRelation.NORMAL:
+                trainer.positiveRewards += trainer.neutralReward;
+                break;
+            case ElementRelation.ABSORB:
+                trainer.negativeRewards += trainer.absorbReward;
+                break;
+            case ElementRelation.REPEL:
+                trainer.negativeRewards += trainer.repelReward;
+                break;
+            case ElementRelation.NULL:
+                trainer.negativeRewards += trainer.nullReward;
+                break;
         }
-        enemyAI.RequestDecision();
+    }
+    void UseRandomSkill()
+    {
+        int skillRand;
+        do
+        {
+            skillRand = Random.Range(0, currentCharacter.Skills.Count);
+        } while (!(currentCharacter.Skills[skillRand].CharacterHaveHP(currentCharacter) && currentCharacter.Skills[skillRand].CharacterHaveMP(currentCharacter)));
+        selectedSkill = currentCharacter.Skills[skillRand];
+        List<Character> targets;
+        //Only works for one enemy and 1-4 allies, not for multiple enemies
+        switch (selectedSkill.Scope)
+        {
+            case TargetChoice.ONE_ENEMY:
+                targets = enemies;
+                break;
+            case TargetChoice.ALL_ENEMIES:
+                targets = enemies;
+                break;
+            case TargetChoice.ONE_ALLY:
+                targets = new List<Character> { party[RandomizeParty()] };
+                break;
+            case TargetChoice.ALL_ALLIES:
+                targets = enemies;
+                break;
+            case TargetChoice.USER:
+                targets = new List<Character> { currentCharacter };
+                break;
+            case TargetChoice.ALL:
+                targets = new List<Character>();
+                for (int i = 0; i < party.Count; i++)
+                {
+                    if (!party[i].CheckStatesByName("Death"))
+                    {
+                        targets.Add(party[i]);
+                    }
+                }
+                for (int i = 0; i < enemies.Count; i++)
+                {
+                    if (!enemies[i].CheckStatesByName("Death"))
+                    {
+                        targets.Add(enemies[i]);
+                    }
+                }
+                break;
+            default:
+                targets = new List<Character>();
+                break;
+        }
+        UseSkill(targets);
+    }
+    int RandomizeParty()
+    {
+        int rand;
+        do
+        {
+            rand = Random.Range(0, party.Count);
+        } while (party[rand].CheckStatesByName("Death"));
+        return rand;
+    }
+    void AIMove()
+    {
+        trainer.RequestDecision();
+        trainer.GetOutput();
+        Academy.Instance.EnvironmentStep();
 
         //Use Skill
-        selectedSkill = BattleData.instance.skillList[enemyAI.chosenSkill];
-        Debug.Log($"{enemyAI.chosenSkill}, {selectedSkill.SkillName}");
-        UseSkill(AICreateTargetsFromSkill(BattleData.instance.skillList[enemyAI.chosenSkill]));
-        
-        Academy.Instance.EnvironmentStep();
+        selectedSkill = skills[trainer.chosenSkill];
+        //Debug.Log($"AIMove - {trainer.chosenSkill}, {selectedSkill.SkillName}");
+        UseSkill(AICreateTargetsFromSkill(skills[trainer.chosenSkill]));
     }
     List<Character> AICreateTargetsFromSkill(Skill s)
     {
-        switch(s.Scope)
+        switch (s.Scope)
         {
             case TargetChoice.ONE_ENEMY:
-                return new List<Character> { BattleData.instance.party[enemyAI.chosenActor] };
+                return new List<Character> { party[trainer.chosenActor] };
             case TargetChoice.ALL_ENEMIES:
-                return BattleData.instance.party;
+                return party;
             case TargetChoice.ONE_ALLY:
-                return BattleData.instance.enemies;
+                return enemies;
             case TargetChoice.ALL_ALLIES:
-                return BattleData.instance.enemies;
+                return enemies;
             case TargetChoice.USER:
-                return BattleData.instance.enemies;
+                return enemies;
             case TargetChoice.ALL:
                 List<Character> characters = new List<Character>();
-                for (int i = 0; i < BattleData.instance.party.Count; i++)
+                for (int i = 0; i < party.Count; i++)
                 {
-                    if (!BattleData.instance.party[i].CheckStatesByName("Death"))
+                    if (!party[i].CheckStatesByName("Death"))
                     {
-                        characters.Add(BattleData.instance.party[i]);
+                        characters.Add(party[i]);
                     }
                 }
-                for (int i = 0; i < BattleData.instance.enemies.Count; i++)
+                for (int i = 0; i < enemies.Count; i++)
                 {
-                    if (!BattleData.instance.enemies[i].CheckStatesByName("Death"))
+                    if (!enemies[i].CheckStatesByName("Death"))
                     {
-                        characters.Add(BattleData.instance.enemies[i]);
+                        characters.Add(enemies[i]);
                     }
                 }
                 return characters;
             default:
                 return new List<Character>();
-        }
-    }
-    void ChooseRewardByRelation(ElementRelation relation)
-    {
-        switch(relation)
-        {
-            case ElementRelation.WEAK:
-                enemyAI.AddReward(enemyAI.weakReward);
-                break;
-            case ElementRelation.STRONG:
-                enemyAI.AddReward(enemyAI.strongReward);
-                break;
-            case ElementRelation.NORMAL:
-                enemyAI.AddReward(enemyAI.neutralReward);
-                break;
-            case ElementRelation.ABSORB:
-                enemyAI.AddReward(enemyAI.absorbReward);
-                break;
-            case ElementRelation.REPEL:
-                enemyAI.AddReward(enemyAI.repelReward);
-                break;
-            case ElementRelation.NULL:
-                enemyAI.AddReward(enemyAI.nullReward);
-                break;
         }
     }
 
@@ -600,14 +743,14 @@ public class BattleManager : MonoBehaviour
         List<float> observations = new List<float>();
 
         //Take Self Data
-        GetCharacterData(ref observations, BattleData.instance.enemies[0]);
+        GetCharacterData(ref observations, enemies[0]);
 
         //Take Enemies Data
-        for (int i = 0; i < BattleData.instance.party.Count; i++)
+        for (int i = 0; i < party.Count; i++)
         {
-            GetCharacterData(ref observations, BattleData.instance.party[i]);
+            GetCharacterData(ref observations, party[i]);
         }
-        for (int i = BattleData.instance.party.Count; i < 4; i++)
+        for (int i = party.Count; i < 4; i++)
         {
             GetClearData(ref observations);
         }
@@ -670,5 +813,38 @@ public class BattleManager : MonoBehaviour
         observations.Add(0f);
         observations.Add(0f);
         observations.Add(0f);
+    }
+    public List<int> PrepareDataForAI()
+    {
+        List<int> data = new List<int>();
+        for (int i = 0; i < skills.Count; i++)
+        {
+            if (enemies[0].Skills.Contains(skills[i]) && skills[i].CharacterHaveMP(enemies[0]))
+            {
+                data.Add(i);
+            }
+        }
+        return data;
+    }
+    public void ResetEnvironment()
+    {
+        PrepareData();
+        gameState = GameState.START_SIDE;
+        isBusy = false;
+        //StartSide();
+    }
+    public void ResetEnvBtn()
+    {
+        trainer.NotifyEndEpisode();
+    }
+    public void CheckMoveQueue()
+    {
+        for (int i = 0; i < moveQueue.Count; i++)
+        {
+            if (party[moveQueue[i]].CheckStatesByName("Death"))
+            {
+                moveQueue.RemoveAt(i);
+            }
+        }
     }
 }

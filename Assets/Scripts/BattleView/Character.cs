@@ -61,7 +61,7 @@ public class Character
         }
         return false;
     }
-    public void ChangeHP(int value, bool isPercent = false)
+    public void ChangeHP(int value, bool isPercent = false, State deathState = null)
     {
         if(isPercent)
         {
@@ -78,7 +78,14 @@ public class Character
         if(currentHP < 0)
         {
             currentHP = 0;
-            states.Add(BattleData.instance.statesList[0]);
+            if(deathState != null)
+            {
+                states.Add(deathState);
+            }
+            else
+            {
+                states.Add(BattleData.instance.statesList[0]);
+            }
         }
     }
     public void ChangeMP(int value, bool isPercent = false)
@@ -100,4 +107,23 @@ public class Character
             currentMP = 0;
         }
     }
+
+    //AI Specific
+    public float MaxHPNormalized { get { return maxHP / 9999f; } }
+    public float CurrentHPNormalized { get { return currentHP / 9999f; } }
+    public float MaxMPNormalized { get { return maxHP / 9999f; } }
+    public float CurrentMPNormalized { get { return currentMP / 9999f; } }
+    public float StrengthNormalized { get { return strength / 99f; } }
+    public float MagicNormalized { get { return magic / 99f; } }
+    public float DexterityNormalized { get { return dexterity / 99f; } }
+    public float AgilityNormalized { get { return agility / 99f; } }
+    public float LuckNormalized { get { return luck / 99f; } }
+    public float PhysicalAffinityNormalized { get { return (int)affinities[Element.PHYSICAL] / 5f; } }
+    public float FireAffinityNormalized { get { return (int)affinities[Element.FIRE] / 5f; } }
+    public float IceAffinityNormalized { get { return (int)affinities[Element.ICE] / 5f; } }
+    public float ElectricityAffinityNormalized { get { return (int)affinities[Element.ELECTRICITY] / 5f; } }
+    public float WindAffinityNormalized { get { return (int)affinities[Element.WIND] / 5f; } }
+    public float LightAffinityNormalized { get { return (int)affinities[Element.LIGHT] / 5f; } }
+    public float DarkAffinityNormalized { get { return (int)affinities[Element.DARK] / 5f; } }
+    public float AlmightyAffinityNormalized { get { return (int)affinities[Element.ALMIGHTY] / 5f; } }
 }
