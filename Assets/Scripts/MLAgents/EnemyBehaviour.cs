@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using Unity.MLAgents;
 using Unity.MLAgents.Actuators;
 using Unity.MLAgents.Sensors;
@@ -20,15 +21,42 @@ public class EnemyBehaviour : Agent
     [Header("Actions")]
     public int chosenSkill;
     public int chosenActor;
+
+    public float positiveRewards = 0f;
+    public float negativeRewards = 0f;
+
+    bool firstRun = true;
+    bool resultGenerated = false;
+    bool episodeOver = false;
+    private void Awake()
+    {
+        Academy.Instance.AutomaticSteppingEnabled = false;
+    }
+    public override void Heuristic(in ActionBuffers actionsOut)
+    { }
     public override void CollectObservations(VectorSensor sensor)
     {
+        if (sensor == null)
+        {
+            Debug.LogWarning("Input is null");
+            return;
+        }
         sensor.AddObservation(BattleManager.instance.PrepareObservations());
     }
     public override void OnActionReceived(ActionBuffers actions)
     {
+        resultGenerated = true;
         chosenSkill = actions.DiscreteActions[0];
         chosenActor = actions.DiscreteActions[1];
-        Debug.Log($"Actions Called:\n{chosenSkill} - Skill Index\n{chosenActor} - Actor Index");
+        //Debug.Log($"Actions Called:\n{chosenSkill} - Skill Index\n{chosenActor} - Actor Index");
+    }
+    float CalculateReward()
+    {
+        if (positiveRewards - negativeRewards > 0 || positiveRewards - negativeRewards < 0)
+        {
+            return (positiveRewards + negativeRewards) / (positiveRewards - negativeRewards);
+        }
+        return 0;
     }
     public override void WriteDiscreteActionMask(IDiscreteActionMask actionMask)
     {
@@ -37,7 +65,7 @@ public class EnemyBehaviour : Agent
         for (int i = 0; i < 11; i++)
         {
             //EXCLUDE GUARD SKILL
-            if(skills.Contains(i) && i != 1)
+            if(skills.Contains(i))
             {
                 actionMask.SetActionEnabled(0, i, true);
             }
@@ -47,20 +75,77 @@ public class EnemyBehaviour : Agent
             }
         }
         //SetActors
+        bool isSomeoneAlive = false;
         for (int i = 0; i < BattleData.instance.party.Count; i++)
         {
             if (!BattleData.instance.party[i].CheckStatesByName("Death"))
             {
-                actionMask.SetActionEnabled(1, i, true);
+                isSomeoneAlive = true;
+                break;
             }
-            else
+        }
+        if(isSomeoneAlive)
+        {
+            for (int i = 0; i < BattleData.instance.party.Count; i++)
             {
-                actionMask.SetActionEnabled(1, i, false);
+                if (!BattleData.instance.party[i].CheckStatesByName("Death"))
+                {
+                    actionMask.SetActionEnabled(1, i, true);
+                }
+                else
+                {
+                    actionMask.SetActionEnabled(1, i, false);
+                }
             }
         }
         for (int i = BattleData.instance.party.Count; i < 4; i++)
         {
             actionMask.SetActionEnabled(1, i, false);
         }
+    }
+    public override void OnEpisodeBegin()
+    {
+        if (firstRun)
+        {
+            firstRun = false;
+            return;
+        }
+        positiveRewards = 0f;
+        negativeRewards = 0f;
+        episodeOver = false;
+        /*trainingManager.confirmation.SetActive(true);
+        trainingManager.startButton.gameObject.SetActive(false);*/
+    }
+    public void GetOutput()
+    {
+        int counter = 0;
+
+        while (!resultGenerated)
+        {
+            Thread.Sleep(1);
+            counter++;
+            if (counter >= 5000)
+            {
+                Debug.LogWarning("Possible infinite loop: breaking out of loop.");
+                break;
+            }
+            if (episodeOver)
+            {
+                Debug.LogWarning("Episode over, breaking.");
+                break;
+            }
+        }
+
+        resultGenerated = false;
+    }
+    public void NotifyEndEpisode()
+    {
+        if (episodeOver)
+        {
+            return;
+        }
+        AddReward(CalculateReward());
+        episodeOver = true;
+        EndEpisode();
     }
 }

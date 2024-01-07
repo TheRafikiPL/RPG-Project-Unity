@@ -115,8 +115,10 @@ public class BattleUIController : MonoBehaviour
         {
             Destroy(turns.GetChild(i).gameObject);
         }
+        List<bool> list = BattleManager.instance.turnQueue;
         GameObject temp;
-        foreach (bool turn in BattleManager.instance.turnQueue)
+        list.Reverse();
+        foreach (bool turn in list)
         {
             temp = Instantiate(turnPrefab, turns);
             if(!turn)

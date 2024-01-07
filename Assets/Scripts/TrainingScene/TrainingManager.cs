@@ -9,6 +9,8 @@ public class TrainingManager : MonoBehaviour
 {
     public EnemyTrainer trainer;
 
+    public bool isBusy = true;
+    public GameState gameState;
     public List<Character> party = new List<Character>();
     public List<Character> enemies = new List<Character>();
     public Character currentCharacter;
@@ -28,11 +30,7 @@ public class TrainingManager : MonoBehaviour
     public int statMax = 99;
     public int minActors = 1;
     public int maxActors = 4;
-
-    public float startSideTime = 5f;
-    public float startTurnTime = 5f;
-    public bool isBusy = true;
-    public GameState gameState;
+    
     public int maxTurns = 400;
     public int turns = 0;
 
@@ -367,10 +365,10 @@ public class TrainingManager : MonoBehaviour
     }
     public ElementRelation SkillActivation(Character attacker, Character defender)
     {
-        if(selectedSkill.SkillName == "Wait")
+        if (selectedSkill.SkillName == "Wait")
         {
-            return ElementRelation.NORMAL;
-        }    
+            return ElementRelation.WEAK;
+        }
         //CALCULATE DAMAGE/HEALING
         int damage = selectedSkill.CalculateDamage(attacker, defender);
 

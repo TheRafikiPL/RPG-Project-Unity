@@ -69,14 +69,14 @@ public class EnemyTrainer : Agent
         for (int i = 0; i < 11; i++)
         {
             //EXCLUDE GUARD SKILL
-            if (skills.Contains(i) && i != 1)
+            if (skills.Contains(i))
             {
                 actionMask.SetActionEnabled(0, i, true);
             }
-            /*else
+            else
             {
                 actionMask.SetActionEnabled(0, i, false);
-            }*/
+            }
         }
         //SetActors
         bool isSomeoneAlive = false;
@@ -156,10 +156,10 @@ public class EnemyTrainer : Agent
         }
         AddReward(CalculateReward());
         episodeOver = true;
-        if(ends>20)
+        /*if(ends>20)
         {
             Debug.Break();
-        }
+        }*/
         EndEpisode();
     }
 }
